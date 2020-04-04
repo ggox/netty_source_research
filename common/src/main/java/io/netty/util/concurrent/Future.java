@@ -89,11 +89,13 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
      * failed.
+     * 等待future完成，并且重新抛出失败的异常
      */
     Future<V> syncUninterruptibly();
 
     /**
      * Waits for this future to be completed.
+     * 等待future完成
      *
      * @throws InterruptedException
      *         if the current thread was interrupted
