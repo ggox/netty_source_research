@@ -64,6 +64,7 @@ final class ChannelHandlerMask {
             new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
                 @Override
                 protected Map<Class<? extends ChannelHandler>, Integer> initialValue() {
+                    //使用WeakHashMap key使用弱引用 类似ThreadLocal
                     return new WeakHashMap<Class<? extends ChannelHandler>, Integer>(32);
                 }
             };
@@ -85,6 +86,7 @@ final class ChannelHandlerMask {
 
     /**
      * Calculate the {@code executionMask}.
+     * 计算需要执行的阶段
      */
     private static int mask0(Class<? extends ChannelHandler> handlerType) {
         int mask = MASK_EXCEPTION_CAUGHT;
@@ -161,6 +163,7 @@ final class ChannelHandlerMask {
         return mask;
     }
 
+    //判断是否需要跳过  @Skip注解生效的地方
     @SuppressWarnings("rawtypes")
     private static boolean isSkippable(
             final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {

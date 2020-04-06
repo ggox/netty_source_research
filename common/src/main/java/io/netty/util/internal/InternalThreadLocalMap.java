@@ -120,6 +120,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     // Cache line padding (must be public)
     // With CompressedOops enabled, an instance of this class should occupy at least 128 bytes.
+    //填充解决伪共享问题 开启指针压缩 对象大小刚好达到128byte，两个缓存行
     public long rp1, rp2, rp3, rp4, rp5, rp6, rp7, rp8, rp9;
 
     private InternalThreadLocalMap() {

@@ -51,6 +51,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
+    //通过jdk API 新建一个ServerSocketChannel
     private static ServerSocketChannel newSocket(SelectorProvider provider) {
         try {
             /**
@@ -58,6 +59,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
              *  {@link SelectorProvider#provider()} which is called by each ServerSocketChannel.open() otherwise.
              *
              *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
+             *
+             *  netty对性能的极致追求的体现  不直接使用SelectorProvider.provider()方法是因为内部使用了Synchronized锁，每次新建channel都会尝试获取锁，netty测试 每秒5000个连接性能损失1%
+             *  使用了jdk的nio api
              */
             return provider.openServerSocketChannel();
         } catch (IOException e) {
@@ -86,7 +90,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
     public NioServerSocketChannel(ServerSocketChannel channel) {
+        // 调用父类初始化方法 具体工作如下：
+        // 1.AbstractChannel初始化；初始化parent、id、unsafe、pipline等属性
+        // 2.AbstractNioChannel初始化：channel赋值到ch属性，SelectionKey.OP_ACCEPT赋值给readInterestOp，将channel设置成非阻塞模式(ch.configureBlocking(false))
         super(null, channel, SelectionKey.OP_ACCEPT);
+        //初始化config 为channel、javasocket等属性赋值 自适应的接收 bytebuf分配器 根据每次接收的情况优化每次分配的ByteBuf大小
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 

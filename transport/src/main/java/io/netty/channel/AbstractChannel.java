@@ -85,6 +85,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.id = id;
         unsafe = newUnsafe();
+        //初始化ChannelPipeline
         pipeline = newChannelPipeline();
     }
 
@@ -245,6 +246,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        //调用pipeline bind方法 从tail 开始往前遍历 如果没有特殊hander 会最终知道用head的bing方法 完成最后的bind
         return pipeline.bind(localAddress, promise);
     }
 
@@ -462,15 +464,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            // 赋值当前channel的eventLoop属性
             AbstractChannel.this.eventLoop = eventLoop;
-
+            // 判断当前线程是否为eventLoop绑定的线程,如果不是就用eventLoop绑定的线程执行
+            // 第一次执行时 eventLoop还未启动，inEventLoop肯定返回fale，执行execute方法时 内部调用 startTread启动线程
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
                 try {
+                    //这个方法第一次调用还起到启动线程的作用
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
+                            // 此时eventLoop线程已经启动了
                             register0(promise);
                         }
                     });
@@ -485,6 +491,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
+        // 真正注册的地方
         private void register0(ChannelPromise promise) {
             try {
                 // check if the channel is still open as it could be closed in the mean time when the register
@@ -493,22 +500,29 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
+                // 留给子类实现 模板方法模式 AbstractNioChannel做的事情：循环注册0事件，获取selectionKey 缓存到selectionKey属性上
                 doRegister();
                 neverRegistered = false;
                 registered = true;
 
                 // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                 // user may already fire events through the pipeline in the ChannelFutureListener.
+                // 执行之前未注册前调用addLast添加的hander的handlerAdded方法
                 pipeline.invokeHandlerAddedIfNeeded();
 
+                // 设置promise成功
                 safeSetSuccess(promise);
+                // 调用pipeline fireChannelRegistered方法 会一直传递下去 注意此时
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
+                // 第一次还没有绑定 不会执行里面的逻辑
                 if (isActive()) {
                     if (firstRegistration) {
+                        // 在fireChannelActive中最终触发监听OP_ACCEPT事件
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
+                        // 进入读的分支
                         // This channel was registered before and autoRead() is set. This means we need to begin read
                         // again so that we process inbound data.
                         //
@@ -547,6 +561,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             try {
+                // 最终调用jdk的bind方法
                 doBind(localAddress);
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
@@ -555,9 +570,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (!wasActive && isActive()) {
+                // 绑定端口之后出发pipeline的fireChannelActive方法 其中最终会监听OP_ACCEPT事件
                 invokeLater(new Runnable() {
                     @Override
                     public void run() {
+                        // 具体流程： 从head开始 通过ctx.fireChannelActive 依次调用channelActive方法 然后调用head的readIfIsAutoRead方法
+                        // 触发channel的read()方法 AbstractChannel的read()方法实际委托给了pipeline的read()方法
+                        // pipeline的read()方法从tail开始一次往前传递，最终调用head 的 read()方法
+                        // head里的read方法 委托unsafe的beginRead()方法，最终调用AbstractNioChannel的doBeginRead()方法，使用jdk API注册OP_ACCEPT事件
                         pipeline.fireChannelActive();
                     }
                 });

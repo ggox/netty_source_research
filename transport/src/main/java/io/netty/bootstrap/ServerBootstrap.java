@@ -127,30 +127,38 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return this;
     }
 
+    //父类新建channel后调用
     @Override
     void init(Channel channel) {
+        // 设置连接参数 大部分通过javaSocket属性等设置 使用之前设置的参数
         setChannelOptions(channel, newOptionsArray(), logger);
+        // 为channel设置attribute参数 channel.attr()方法，整个channel生命周期内都可以使用
         setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
 
+        //获取ChannlePipeline 在channel实例化时设置的
         ChannelPipeline p = channel.pipeline();
 
         final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions;
+        // channelOptions主要用于服务端，给打开的socket设置参数
         synchronized (childOptions) {
             currentChildOptions = childOptions.entrySet().toArray(EMPTY_OPTION_ARRAY);
         }
+        // 同上
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
 
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) {
                 final ChannelPipeline pipeline = ch.pipeline();
+                // 调用handler方法的handler 添加到pipeline中
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
                     pipeline.addLast(handler);
                 }
 
+                //添加ServerBootstrapAcceptor到pipeline中,ServerBootstrapAcceptor主要作用 处理接收连接的逻辑
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {

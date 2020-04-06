@@ -140,6 +140,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
+        // 从ChannelHandlerContext 链中删选出第一个包含执行目标 MASK_CHANNEL_REGISTERED 的context， 通过executionMask判断，该属性是在ChannelHandlerContext实例化时赋值的
         invokeChannelRegistered(findContextInbound(MASK_CHANNEL_REGISTERED));
         return this;
     }
@@ -978,7 +979,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
      * but not called {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}.
      */
     private boolean invokeHandler() {
-        // Store in local variable to reduce volatile reads.
+        // Store in local variable to reduce volatile reads. netty的性能优化点：将volatile的属性保存在局部变量中，减少重复读的性能损失
         int handlerState = this.handlerState;
         return handlerState == ADD_COMPLETE || (!ordered && handlerState == ADD_PENDING);
     }

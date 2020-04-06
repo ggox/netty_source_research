@@ -32,13 +32,17 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
     @SuppressWarnings("unchecked")
     @Override
     public EventExecutorChooser newChooser(EventExecutor[] executors) {
+        //性能优化点
         if (isPowerOfTwo(executors.length)) {
+            //2的幂次方选择器字节位运算选择
             return new PowerOfTwoEventExecutorChooser(executors);
         } else {
+            //普通取余选择 性能差点
             return new GenericEventExecutorChooser(executors);
         }
     }
 
+    // 位运算判断是否为2的幂次方
     private static boolean isPowerOfTwo(int val) {
         return (val & -val) == val;
     }

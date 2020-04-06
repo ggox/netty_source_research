@@ -94,6 +94,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         succeededFuture = new SucceededChannelFuture(channel, null);
         voidPromise =  new VoidChannelPromise(channel, true);
 
+        //初始化两个ChannelHandlerContext tail 和 head
         tail = new TailContext(this);
         head = new HeadContext(this);
 
@@ -120,22 +121,27 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
     }
 
+    //根据group返回EventExecutor
     private EventExecutor childExecutor(EventExecutorGroup group) {
         if (group == null) {
             return null;
         }
+        // 是否单线程执行pipeline中的handler 默认为true
         Boolean pinEventExecutor = channel.config().getOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP);
+        // 如果是false，直接使用group.next()取一个executor
         if (pinEventExecutor != null && !pinEventExecutor) {
             return group.next();
         }
         Map<EventExecutorGroup, EventExecutor> childExecutors = this.childExecutors;
         if (childExecutors == null) {
-            // Use size of 4 as most people only use one extra EventExecutor.
+            // Use size of 4 as most people only use one extra EventExecutor. 大部分只使用一个
+            //初始化一个4大小的IdentityHashMap IdentityHashMap使用System.identityHashCode方法，key必须是同一个对象才行
             childExecutors = this.childExecutors = new IdentityHashMap<EventExecutorGroup, EventExecutor>(4);
         }
         // Pin one of the child executors once and remember it so that the same child executor
         // is used to fire events for the same channel.
         EventExecutor childExecutor = childExecutors.get(group);
+        // 如果当前childExecutor为空就put一个
         if (childExecutor == null) {
             childExecutor = group.next();
             childExecutors.put(group, childExecutor);
@@ -200,22 +206,27 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
             checkMultiplicity(handler);
-
+            //初始化一个ChannelHandlerContext
             newCtx = newContext(group, filterName(name, handler), handler);
-
+            //将ChannelHandlerContext添加到链路中
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
             // In this case we add the context to the pipeline and add a task that will call
             // ChannelHandler.handlerAdded(...) once the channel is registered.
             if (!registered) {
+                //还未注册 newCtx设置ADD_PENDING状态
                 newCtx.setAddPending();
+                //将PendingHandlerAddedTask添加到task队列中 等到注册好了会将列表的task逐个执行handlerAdded方法
                 callHandlerCallbackLater(newCtx, true);
                 return this;
             }
 
+            // 如果已经注册好了 马上执行handler的handlerAdded方法
             EventExecutor executor = newCtx.executor();
+            //如果executor不是当前的eventloop线程
             if (!executor.inEventLoop()) {
+                // 使用executor 最终调用 handler的handlerAdded方法
                 callHandlerAddedInEventLoop(newCtx, executor);
                 return this;
             }
@@ -592,6 +603,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         oldCtx.next = newCtx;
     }
 
+    // 检查是否多次添加 如果多次添加同一个handler，需要使用@Sharable注解
     private static void checkMultiplicity(ChannelHandler handler) {
         if (handler instanceof ChannelHandlerAdapter) {
             ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
@@ -1331,6 +1343,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            // HeadContext的bind方法 委托给unsafe实例调用，channle().unsafe()
             unsafe.bind(localAddress, promise);
         }
 

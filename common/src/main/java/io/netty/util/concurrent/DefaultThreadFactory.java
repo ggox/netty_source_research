@@ -118,6 +118,7 @@ public class DefaultThreadFactory implements ThreadFactory {
         return t;
     }
 
+    //使用 FastThreadLocalThread 代替Thread 配合FastThreadLocal性能提升
     protected Thread newThread(Runnable r, String name) {
         return new FastThreadLocalThread(threadGroup, r, name);
     }

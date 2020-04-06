@@ -275,6 +275,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    // 延时任务处理 核心逻辑：循环取出当前可执行的延时任务 加入taskQueue 知道没有任务为止，放回true； 如果加入失败，放回延时任务队列，返回false
     private boolean fetchFromScheduledTaskQueue() {
         if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
             return true;
@@ -474,9 +475,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             runTasks ++;
 
             // Check timeout every 64 tasks because nanoTime() is relatively expensive.
+            // nanoTime（）是一个昂贵的操作，所以每执行64个任务检查一次
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
+                //如果达到deadLine了则退出任务执行
                 if (lastExecutionTime >= deadline) {
                     break;
                 }
@@ -978,6 +981,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         executor.execute(new Runnable() {
             @Override
             public void run() {
+                // eventLoop 启动时为thread属性赋值
                 thread = Thread.currentThread();
                 if (interrupted) {
                     thread.interrupt();

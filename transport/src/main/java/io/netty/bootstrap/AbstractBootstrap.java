@@ -264,17 +264,26 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind(SocketAddress localAddress) {
+        //校验group参数和channelFactory参数
         validate();
         return doBind(ObjectUtil.checkNotNull(localAddress, "localAddress"));
     }
 
+    //总体来说做的工作是：
+    // 1. 初始化NioServerSocketChannel 通过反射
+    // 2. initChannel(channel) 设置连接参数，添加初始handler等
+    // 3. 调用EventLoopGroup的register方法，会通过next()选取一个EventLoop执行register 此时会new一个Promise，
+    //    然后委托给chanel() 的 unsafe()方法返回的uasafe实例的register()方法，回将channel的eventLoop属性赋值当前的eventLoop 然后调用register0方法，
+    //    设置一些注册参数，执行之前没有执行过的hander的handlerAdded方法，提前将socket注册到selector，返回selectionKey 赋值到属性上 调用pipeline的fireChannelRegistered方法等
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        // 初始化和注册 返回一个ChannelFuture 其实是一个ChannelPromise 当完成注册时 会调用safeSetSuccess方法 响应式编程的体现
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
             return regFuture;
         }
 
+        // abstactUnsafe 的 register()完成
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
@@ -282,7 +291,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return promise;
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
+            final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel); // 和DefaultChannelPromise的区别在于executor()方法，内部维护register属性，如果注册没有完成，只能使用GlobalEventExecutor
+            // 如果注册没有完成 注册监听器等待完成
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -304,10 +314,17 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
     }
 
+    //初始化并注册channel
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
+            //其实是ReflectiveChannelFactory通过反射创建channel， 如果是服务器就是初始化NioServerSocketChannel,具体做了什么工作见NioServerSocketChannel类
             channel = channelFactory.newChannel();
+            // 初始化channel 留给子类实现 典型的模板方法模式
+            // ServerBootStrap主要做了以下工作：
+            // 1.设置连接参数和attr属性
+            // 2.addLast ChannelInitializer实例
+            // 3.ChannelInitializer实例中的initChannel主要做的事情：添加之前设置的hander到pipeline中，添加一个任务到队列，任务队列是将ServerBootstrapAcceptor到pipeline中用于处理连接情况 这里的channel指的是NioServerSocketChannel 每个channel都有自己的pipeline 注意这个任务不会马上执行,要等eventLoop第二次轮询时才会执行
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
@@ -320,6 +337,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
+        // 调用bossGroup的register方法，注册channel，registered设置为true 委托给AbstractUasafe中的register方法
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {
@@ -343,6 +361,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     abstract void init(Channel channel) throws Exception;
 
+    // 真正的绑定方法 调用channel的bind方法 内部调用pipeline的bind方法
     private static void doBind0(
             final ChannelFuture regFuture, final Channel channel,
             final SocketAddress localAddress, final ChannelPromise promise) {
@@ -385,6 +404,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public abstract AbstractBootstrapConfig<B, C> config();
 
+    //获取之前设置的参数
     final Map.Entry<ChannelOption<?>, Object>[] newOptionsArray() {
         synchronized (options) {
             return options.entrySet().toArray(EMPTY_OPTION_ARRAY);

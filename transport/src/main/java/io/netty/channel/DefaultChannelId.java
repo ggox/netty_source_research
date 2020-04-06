@@ -159,6 +159,7 @@ public final class DefaultChannelId implements ChannelId {
     private transient String longValue;
 
     private DefaultChannelId() {
+        //channelid组成成分：机器id，进程id，数列id，时间戳，随机数
         data = new byte[MACHINE_ID.length + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN];
         int i = 0;
 

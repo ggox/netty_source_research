@@ -377,12 +377,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
+                // 循环注册0事件 主要作用应该是提前获取 selectionKey
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {
+                // 如果channel已经注册到selector上了但是key被取消了就会抛出这个异常
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be
                     // cached and not removed because no Select.select(..) operation was called yet.
+                    // 强制再调用一次selectNow 清除失效的selectionKey
                     eventLoop().selectNow();
                     selected = true;
                 } else {
