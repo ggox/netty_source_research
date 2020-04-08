@@ -64,7 +64,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
             final ChannelConfig config = config();
             final ChannelPipeline pipeline = pipeline();
-            final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+            final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();//接收数据的bytebuf分配器处理器
             allocHandle.reset(config);
 
             boolean closed = false;
@@ -72,6 +72,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
+                        //真正的accept操作
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             break;
@@ -81,8 +82,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                             break;
                         }
 
-                        allocHandle.incMessagesRead(localRead);
-                    } while (allocHandle.continueReading());
+                        allocHandle.incMessagesRead(localRead);//读数据加一
+                    } while (allocHandle.continueReading());//是否继续读的逻辑
                 } catch (Throwable t) {
                     exception = t;
                 }
@@ -90,6 +91,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
+                    // 通过pipeline一次调用channelRead方法，处理连接事件是在ServerBootstrapAcceptor中，此时传递的msg是NioSocketChannel实例
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();

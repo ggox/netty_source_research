@@ -43,12 +43,14 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
 
     private static final int[] SIZE_TABLE;
 
+    // 初始化各种bytebuf大小的可能性，保存在SIZE_TABLE中
     static {
         List<Integer> sizeTable = new ArrayList<Integer>();
         for (int i = 16; i < 512; i += 16) {
             sizeTable.add(i);
         }
 
+        //int 超出范围会小于0
         for (int i = 512; i > 0; i <<= 1) {
             sizeTable.add(i);
         }
@@ -65,6 +67,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     @Deprecated
     public static final AdaptiveRecvByteBufAllocator DEFAULT = new AdaptiveRecvByteBufAllocator();
 
+    //根据大小获取适合的SIZE_TABLE中的大小，返回数组index
     private static int getSizeTableIndex(final int size) {
         for (int low = 0, high = SIZE_TABLE.length - 1;;) {
             if (high < low) {

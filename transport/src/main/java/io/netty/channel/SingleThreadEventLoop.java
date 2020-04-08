@@ -102,6 +102,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     /**
      * Adds a task to be run once at the end of next (or current) {@code eventloop} iteration.
+     * 添加任务到tailTasks队列中，tailTasks的任务会在taskQueue中的任务执行完后再执行
      *
      * @param task to be added.
      */
@@ -133,6 +134,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return tailTasks.remove(ObjectUtil.checkNotNull(task, "task"));
     }
 
+    //等待taskQueue中的任务执行完后执行tailTasks
     @Override
     protected void afterRunningAllTasks() {
         runAllTasksFrom(tailTasks);
