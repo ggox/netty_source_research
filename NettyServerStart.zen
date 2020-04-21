@@ -1,0 +1,42 @@
+// Netty服务端启动流程
+ServerBootStrap.bind(port){
+  bind(localAddress){
+    //note 校验group参数和channelFactory参数
+    validate() 
+    doBind(localAddress){
+      regFuture = initAndRegister(){
+        channel = ChannelFactory.newChannel() 
+        //1. 设置options参数
+        //2. 设置attrbute参数
+        //3. pipeline初始化工作 添加handler 异步添加ServerBootstrapAcceptor
+        init(channel){
+          pipeline = NioServerSocketChannel.pipeline()
+          DefaultChannelPipeline.addLast(new ChannelInitializer)
+        }
+        future = NioEventLoopGroup.register(channel){
+          eventLoop = next()
+          NioEventLoop.register(channel){
+          promise = register(new DefaultChannelPromise){
+              // 1.为当前channel的eventLoop赋值
+              // 2.调用register0(promise)方法
+             NioMessageUnsafe.register(eventLoop,promise){
+                NioEventLoop.execute(){
+                    // 异步执行register0
+                    NioEventLoop -> NioMessageUnsafe:register0(promise)
+                }
+              }
+            }
+          }
+        }
+      }
+      if(regFuture.isDone()){
+        doBind0()
+      }
+      if(!regFuture.isDone()){
+        // 将doBind0()的逻辑放在ChannelFutureListener中，等regFuture完成后执行
+        regFuture.addListener(doBind0());
+      }
+      
+    }
+  }
+}

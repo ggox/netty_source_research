@@ -467,7 +467,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // 赋值当前channel的eventLoop属性
             AbstractChannel.this.eventLoop = eventLoop;
             // 判断当前线程是否为eventLoop绑定的线程,如果不是就用eventLoop绑定的线程执行
-            // 第一次执行时 eventLoop还未启动，inEventLoop肯定返回fale，执行execute方法时 内部调用 startTread启动线程
+            // 第一次执行时 eventLoop还未启动，inEventLoop肯定返回false，执行execute方法时 内部调用 startTread启动线程
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {

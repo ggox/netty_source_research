@@ -273,7 +273,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     // 1. 初始化NioServerSocketChannel 通过反射
     // 2. initChannel(channel) 设置连接参数，添加初始handler等
     // 3. 调用EventLoopGroup的register方法，会通过next()选取一个EventLoop执行register 此时会new一个Promise，
-    //    然后委托给chanel() 的 unsafe()方法返回的uasafe实例的register()方法，回将channel的eventLoop属性赋值当前的eventLoop 然后调用register0方法，
+    //    然后委托给chanel() 的 unsafe()方法返回的uasafe实例的register()方法，会将channel的eventLoop属性赋值当前的eventLoop 然后调用register0方法，
     //    设置一些注册参数，执行之前没有执行过的hander的handlerAdded方法，提前将socket注册到selector，返回selectionKey 赋值到属性上 调用pipeline的fireChannelRegistered方法等
     private ChannelFuture doBind(final SocketAddress localAddress) {
         // 初始化和注册 返回一个ChannelFuture 其实是一个ChannelPromise 当完成注册时 会调用safeSetSuccess方法 响应式编程的体现
