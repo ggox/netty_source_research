@@ -415,7 +415,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         final int interestOps = selectionKey.interestOps();
         // 先判断有没有监听
         if ((interestOps & readInterestOp) == 0) {
-            //NioServerSocketChannel时 readInterestOp = OP_ACCEPT
+            // NioServerSocketChannel时 readInterestOp = OP_ACCEPT
+            // NioSocketChannel时 readInterestOp = OP_READ
+            // 注册好监听事件后 接下来处理的流程就在NioEventLoop的事件轮训线程中了
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }

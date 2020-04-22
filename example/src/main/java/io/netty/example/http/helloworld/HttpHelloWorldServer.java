@@ -52,6 +52,7 @@ public final class HttpHelloWorldServer {
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
+            b.childOption(ChannelOption.TCP_NODELAY, false);
             b.group(bossGroup, workerGroup)
              //内部给AbstractBootstrap类的channelFactory属性赋值 通过反射生成channel
              .channel(NioServerSocketChannel.class)

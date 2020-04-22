@@ -978,6 +978,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
      * This is needed as {@link DefaultChannelPipeline} may already put the {@link ChannelHandler} in the linked-list
      * but not called {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}.
      */
+    // 判断handler的handlerAdded是否被执行过，执行过或无法检测则放回true 否则放回fasle，然后本身方法不会执行只做传递
     private boolean invokeHandler() {
         // Store in local variable to reduce volatile reads. netty的性能优化点：将volatile的属性保存在局部变量中，减少重复读的性能损失
         int handlerState = this.handlerState;

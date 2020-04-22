@@ -85,6 +85,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return METADATA;
     }
 
+    // 判断是否需要中断当前读事件
     final boolean shouldBreakReadReady(ChannelConfig config) {
         return isInputShutdown0() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
     }
@@ -128,6 +129,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
+        // socketchannel 读数据的实现方法
         @Override
         public final void read() {
             final ChannelConfig config = config();
@@ -137,6 +139,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
+            // RecvByteBufAllocator 默认实现是 AdaptiveRecvByteBufAllocator
             final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
             allocHandle.reset(config);
 
@@ -144,6 +147,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             boolean close = false;
             try {
                 do {
+                    // 内部通过guess方法 通过以往统计信息预测本次读的数据大小，从而分配ByteBuf的初始容量
                     byteBuf = allocHandle.allocate(allocator);
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
@@ -162,7 +166,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
-                } while (allocHandle.continueReading());
+                } while (allocHandle.continueReading());// LT模式（水平触发） 即使没有读完，下次读事件还是会触发的  EpollSocketChannel默认使用ET模式（边缘触发）,没有读完的数据需要手动execute一个任务继续读
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
@@ -179,6 +183,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
+                // HeadContext的channelReadComplete方法中会调用readIfIsAutoRead(),所以如果自动设置了autoRead时，readPending会变成true
                 if (!readPending && !config.isAutoRead()) {
                     removeReadOp();
                 }

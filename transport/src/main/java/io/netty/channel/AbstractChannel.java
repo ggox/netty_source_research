@@ -246,7 +246,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        //调用pipeline bind方法 从tail 开始往前遍历 如果没有特殊hander 会最终知道用head的bing方法 完成最后的bind
+        //调用pipeline bind方法 从tail 开始往前遍历 如果没有特殊hander 会最终知道用head的bind方法 完成最后的bind
         return pipeline.bind(localAddress, promise);
     }
 
@@ -516,10 +516,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
-                // 第一次还没有绑定 不会执行里面的逻辑
+                // channel 注册成功才会触发channelActive方法不会执行里面的逻辑  这个方法主要给SocketChannel使用，ServerSocketChannel不会调用，会在HeadContext.bind方法中触发pipeline.fireChannelActive()
                 if (isActive()) {
                     if (firstRegistration) {
-                        // 在fireChannelActive中最终触发监听OP_ACCEPT事件
+                        // 在HeadContext的channelActive中监听read事件
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
                         // 进入读的分支
@@ -561,7 +561,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             try {
-                // 最终调用jdk的bind方法
+                // 最终调用jdk的bind方法  tips:使用java特性->内部类调用外部类方法
                 doBind(localAddress);
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
@@ -569,6 +569,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            // 只有之前没有bind，现在bind的情况才会触发
             if (!wasActive && isActive()) {
                 // 绑定端口之后出发pipeline的fireChannelActive方法 其中最终会监听OP_ACCEPT事件
                 invokeLater(new Runnable() {
