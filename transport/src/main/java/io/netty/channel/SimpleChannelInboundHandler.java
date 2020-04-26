@@ -58,6 +58,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      *                      {@link ReferenceCountUtil#release(Object)}.
      */
     protected SimpleChannelInboundHandler(boolean autoRelease) {
+        // 泛型匹配器，匹配闯进来的msg是不是所示泛型
         matcher = TypeParameterMatcher.find(this, SimpleChannelInboundHandler.class, "I");
         this.autoRelease = autoRelease;
     }

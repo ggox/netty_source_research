@@ -67,6 +67,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final Channel channel;
     private final ChannelFuture succeededFuture;
     private final VoidChannelPromise voidPromise;
+    // 是否打开资源泄露检测
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
