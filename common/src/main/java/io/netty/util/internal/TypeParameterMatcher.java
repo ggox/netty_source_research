@@ -34,6 +34,7 @@ public abstract class TypeParameterMatcher {
     };
 
     public static TypeParameterMatcher get(final Class<?> parameterType) {
+        // typeParameterMatcherGetCache
         final Map<Class<?>, TypeParameterMatcher> getCache =
                 InternalThreadLocalMap.get().typeParameterMatcherGetCache();
 
@@ -42,6 +43,7 @@ public abstract class TypeParameterMatcher {
             if (parameterType == Object.class) {
                 matcher = NOOP;
             } else {
+                // matcher类的实现
                 matcher = new ReflectiveMatcher(parameterType);
             }
             getCache.put(parameterType, matcher);
@@ -53,10 +55,12 @@ public abstract class TypeParameterMatcher {
     public static TypeParameterMatcher find(
             final Object object, final Class<?> parametrizedSuperclass, final String typeParamName) {
 
+        // typeParameterMatcherFindCache缓存
+        // tips：InternalThreadLocalMap是netty自己实现的ThreadLocalMap 配合FastThreadLocalThread 和 FastThreadLocal 使用，比jdk原生ThreadLocal性能高
         final Map<Class<?>, Map<String, TypeParameterMatcher>> findCache =
                 InternalThreadLocalMap.get().typeParameterMatcherFindCache();
         final Class<?> thisClass = object.getClass();
-
+        // 先从缓存中获取
         Map<String, TypeParameterMatcher> map = findCache.get(thisClass);
         if (map == null) {
             map = new HashMap<String, TypeParameterMatcher>();
@@ -65,6 +69,7 @@ public abstract class TypeParameterMatcher {
 
         TypeParameterMatcher matcher = map.get(typeParamName);
         if (matcher == null) {
+            // 构建TypeParameterMatcher
             matcher = get(find0(object, parametrizedSuperclass, typeParamName));
             map.put(typeParamName, matcher);
         }
@@ -72,14 +77,17 @@ public abstract class TypeParameterMatcher {
         return matcher;
     }
 
+    // 获取泛型类型信息
     private static Class<?> find0(
             final Object object, Class<?> parametrizedSuperclass, String typeParamName) {
 
         final Class<?> thisClass = object.getClass();
         Class<?> currentClass = thisClass;
         for (;;) {
+            // 如果父类相等
             if (currentClass.getSuperclass() == parametrizedSuperclass) {
                 int typeParamIndex = -1;
+                // 反射接口获取泛型位置偏移量
                 TypeVariable<?>[] typeParams = currentClass.getSuperclass().getTypeParameters();
                 for (int i = 0; i < typeParams.length; i ++) {
                     if (typeParamName.equals(typeParams[i].getName())) {
@@ -99,16 +107,20 @@ public abstract class TypeParameterMatcher {
                 }
 
                 Type[] actualTypeParams = ((ParameterizedType) genericSuperType).getActualTypeArguments();
-
+                // 根据位置偏移量获取获取反射类型
                 Type actualTypeParam = actualTypeParams[typeParamIndex];
                 if (actualTypeParam instanceof ParameterizedType) {
+                    // 如果是嵌套泛型类，获取rawtype
                     actualTypeParam = ((ParameterizedType) actualTypeParam).getRawType();
                 }
                 if (actualTypeParam instanceof Class) {
                     return (Class<?>) actualTypeParam;
                 }
+                // 数组
                 if (actualTypeParam instanceof GenericArrayType) {
+                    // 数组原始类型
                     Type componentType = ((GenericArrayType) actualTypeParam).getGenericComponentType();
+                    // 是数组嵌套泛型
                     if (componentType instanceof ParameterizedType) {
                         componentType = ((ParameterizedType) componentType).getRawType();
                     }
