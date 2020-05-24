@@ -449,11 +449,13 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         @Override
         protected Executor prepareToClose() {
             try {
+                // 设置了so_linger参数，不会马上关闭sockechannel 会在一定时间内尝试将send_buffer中的数据发送出去
                 if (javaChannel().isOpen() && config().getSoLinger() > 0) {
                     // We need to cancel this key of the channel so we may not end up in a eventloop spin
                     // because we try to read or write until the actual close happens which may be later due
                     // SO_LINGER handling.
                     // See https://github.com/netty/netty/issues/4449
+                    // 调用selectionKey.cancel();
                     doDeregister();
                     return GlobalEventExecutor.INSTANCE;
                 }
