@@ -873,11 +873,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
+        // 最终还是委托给unsafe类write方法
         @Override
         public final void write(Object msg, ChannelPromise promise) {
             assertEventLoop();
 
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            // 表示channel已经close了
             if (outboundBuffer == null) {
                 // If the outboundBuffer is null we know the channel was closed and so
                 // need to fail the future right away. If it is not null the handling of the rest
@@ -891,6 +893,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             int size;
             try {
+                // 写入buffer前过滤msg
                 msg = filterOutboundMessage(msg);
                 size = pipeline.estimatorHandle().size(msg);
                 if (size < 0) {
@@ -920,6 +923,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @SuppressWarnings("deprecation")
         protected void flush0() {
+            // 防止重入
             if (inFlush0) {
                 // Avoid re-entrance
                 return;

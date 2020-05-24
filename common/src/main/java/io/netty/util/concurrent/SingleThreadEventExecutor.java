@@ -848,6 +848,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
 
+        // 如果addTaskWakesUp为false 表示 addTask()时没有唤醒线程 需要再次唤醒线程
         if (!addTaskWakesUp && immediate) {
             wakeup(inEventLoop);
         }
@@ -920,6 +921,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * Can be overridden to control which tasks require waking the {@link EventExecutor} thread
      * if it is waiting so that they can be run immediately.
+     * 如果当前线程正在等待 这个任务是否允许唤醒线程
      */
     protected boolean wakesUpForTask(Runnable task) {
         return true;

@@ -382,6 +382,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         do {
             if (in.isEmpty()) {
                 // All written so clear OP_WRITE
+                // 写完了 取消OP_Write事件 否则一直触发写事件
                 clearOpWrite();
                 // Directly return here so incompleteWrite(...) is not called.
                 return;
@@ -435,6 +436,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             }
         } while (writeSpinCount > 0);
 
+        // 写次数超过限制 默认16次
         incompleteWrite(writeSpinCount < 0);
     }
 

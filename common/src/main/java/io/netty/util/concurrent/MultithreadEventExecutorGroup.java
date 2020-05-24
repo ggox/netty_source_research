@@ -110,6 +110,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
 
+        // 选择不同的chooser 可以位运算还是只能取余
         chooser = chooserFactory.newChooser(children);
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
@@ -132,7 +133,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     }
 
     /**
-     * 默认thread factory
+     * 默认thread factory 生成FastThreadLocalThread
      * @return
      */
     protected ThreadFactory newDefaultThreadFactory() {

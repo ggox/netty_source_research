@@ -768,9 +768,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
+    /**
+     * @param flush 是否马上flush
+     */
     private void write(Object msg, boolean flush, ChannelPromise promise) {
         ObjectUtil.checkNotNull(msg, "msg");
         try {
+            // 校验promise有效性
             if (isNotValidPromise(promise, true)) {
                 ReferenceCountUtil.release(msg);
                 // cancelled
@@ -781,7 +785,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             throw e;
         }
 
-        // 查询接下来实现了write or flush功能的handler
+        // 查询接下来实现了write or flush功能的handler 不出意外最终还是依赖HeadContext处理
         final AbstractChannelHandlerContext next = findContextOutbound(flush ?
                 (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
         final Object m = pipeline.touch(msg, next);// 资源检测相关 记录对象访问位置
@@ -1100,8 +1104,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
         void cancel() {
             try {
+                // 输出缓冲区调整位置释放数据
                 decrementPendingOutboundBytes();
             } finally {
+                // task回收再利用
                 recycle();
             }
         }

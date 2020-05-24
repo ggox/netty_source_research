@@ -52,6 +52,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
 
     /**
      * Creates a new instance that combines the specified two handlers into one.
+     * CombinedChannelDuplexHandler 实现了 ChannelInboundHandler 和 ChannelOutboundHandler 接口 但是具体实现还是委托给不同的inboundHandler和outboundHandler处理
      */
     public CombinedChannelDuplexHandler(I inboundHandler, O outboundHandler) {
         ensureNotSharable();

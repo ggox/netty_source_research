@@ -60,6 +60,7 @@ public final class ThreadExecutorMap {
     }
 
     /**
+     * 装饰这个runnable 任务run中 currentExecutor方法返回正确的executor
      * Decorate the given {@link Runnable} and ensure {@link #currentExecutor()} will return {@code eventExecutor}
      * when called from within the {@link Runnable} during execution.
      */

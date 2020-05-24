@@ -214,7 +214,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         final Class<?> selectorImplClass = (Class<?>) maybeSelectorImplClass;
-        //netty 自己构建了一个SelectedKeySet 出于性能和节约内存考虑吧，内部就一个数组 避免了如hashset(散列表实现)等的空间浪费
+        //netty 自己构建了一个SelectedKeySet 出于性能和节约内存考虑吧，内部就一个数组
+        // 遍历时充分利用cpu缓存
+        // 避免了如hashset(散列表实现)等的空间浪费
         final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
         //主要通过反射替换unwrappedSelector类的selectedKeys和publicSelectedKeys属性

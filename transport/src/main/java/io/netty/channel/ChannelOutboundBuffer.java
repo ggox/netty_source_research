@@ -146,6 +146,7 @@ public final class ChannelOutboundBuffer {
             }
             do {
                 flushed ++;
+                // 设置promise不允许取消失败，表明已经被取消了 释放内存，通知是否可写状态
                 if (!entry.promise.setUncancellable()) {
                     // Was cancelled so make sure we free up memory and notify about the freed bytes
                     int pending = entry.cancel();
@@ -173,6 +174,7 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
+        // 超过了写数据的高水位线 设置unwritable不为0，然后触发channel的writabilityChanged方法 由应用自己决定是不是继续写
         if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
             setUnwritable(invokeLater);
         }
@@ -197,6 +199,11 @@ public final class ChannelOutboundBuffer {
         }
     }
 
+    /**
+     * msg大小
+     * @param msg
+     * @return
+     */
     private static long total(Object msg) {
         if (msg instanceof ByteBuf) {
             return ((ByteBuf) msg).readableBytes();
@@ -824,6 +831,7 @@ public final class ChannelOutboundBuffer {
         static Entry newInstance(Object msg, int size, long total, ChannelPromise promise) {
             Entry entry = RECYCLER.get();
             entry.msg = msg;
+            // 额外加上96（默认） 对象本身的大小：对象头+6个引用+2个long+2个int+1个boolean+对其填充
             entry.pendingSize = size + CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
             entry.total = total;
             entry.promise = promise;

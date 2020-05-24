@@ -1248,6 +1248,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @UnstableApi
     protected void decrementPendingOutboundBytes(long size) {
+        // outboundBuffer 写数据的缓冲区
         ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
         if (buffer != null) {
             buffer.decrementPendingOutboundBytes(size);
