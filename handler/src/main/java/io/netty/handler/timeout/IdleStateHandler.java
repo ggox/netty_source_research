@@ -193,6 +193,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             TimeUnit unit) {
         ObjectUtil.checkNotNull(unit, "unit");
 
+        // 是否将写的意图作为idle检测
         this.observeOutput = observeOutput;
 
         if (readerIdleTime <= 0) {
@@ -305,9 +306,13 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * 初始化方法
+     */
     private void initialize(ChannelHandlerContext ctx) {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
+        // 1 -> 初始化完成 2 -> 已销毁
         switch (state) {
         case 1:
         case 2:
@@ -341,6 +346,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
     /**
      * This method is visible for testing!
+     * 构造一个延时任务，delay就是idle检测设置的时间，关键逻辑在task里
      */
     ScheduledFuture<?> schedule(ChannelHandlerContext ctx, Runnable task, long delay, TimeUnit unit) {
         return ctx.executor().schedule(task, delay, unit);
@@ -366,6 +372,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     /**
      * Is called when an {@link IdleStateEvent} should be fired. This implementation calls
      * {@link ChannelHandlerContext#fireUserEventTriggered(Object)}.
+     * 传播用户事件，这里是idelevent
      */
     protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
@@ -391,9 +398,11 @@ public class IdleStateHandler extends ChannelDuplexHandler {
      * @see #hasOutputChanged(ChannelHandlerContext, boolean)
      */
     private void initOutputChanged(ChannelHandlerContext ctx) {
+        // 如果开启了observeOutput 即观察写的字节变化（不一定写成功，但有写的意图）判断是否idle
         if (observeOutput) {
             Channel channel = ctx.channel();
             Unsafe unsafe = channel.unsafe();
+            // 写缓冲区
             ChannelOutboundBuffer buf = unsafe.outboundBuffer();
 
             if (buf != null) {
@@ -469,6 +478,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
         @Override
         public void run() {
+            // 判断一下channel是否被打开
             if (!ctx.channel().isOpen()) {
                 return;
             }
@@ -479,6 +489,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         protected abstract void run(ChannelHandlerContext ctx);
     }
 
+    // 写idle检测任务
     private final class ReaderIdleTimeoutTask extends AbstractIdleTask {
 
         ReaderIdleTimeoutTask(ChannelHandlerContext ctx) {
@@ -492,6 +503,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 nextDelay -= ticksInNanos() - lastReadTime;
             }
 
+            // nextDelay小于等于0说明 空间检测触发了 会发送相关事件
             if (nextDelay <= 0) {
                 // Reader is idle - set a new timeout and notify the callback.
                 readerIdleTimeout = schedule(ctx, this, readerIdleTimeNanos, TimeUnit.NANOSECONDS);
@@ -507,6 +519,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
+                // lastRead时间被重置了 表明这中间发生过读事件，重新起一个延时任务，延时时间会剩下的检测时间 nextDelay
                 readerIdleTimeout = schedule(ctx, this, nextDelay, TimeUnit.NANOSECONDS);
             }
         }
@@ -531,6 +544,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 firstWriterIdleEvent = false;
 
                 try {
+                    // 判断这之间输出相关字节是否发生变化，表明这之间是否有过写动作（虽然没有写成功）
                     if (hasOutputChanged(ctx, first)) {
                         return;
                     }
